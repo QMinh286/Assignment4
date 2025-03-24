@@ -35,7 +35,7 @@ int main (void)
   int                client_len;
   struct sockaddr_in client_addr, server_addr;
   int                len, i;
-  pthread_t	     tid[3];		//array capable of holding up to 3 "connection" threads
+  pthread_t	     tid[10];		//array capable of holding up to 10 "connection" threads
   int                whichClient;	
 
   /*
@@ -83,9 +83,9 @@ int main (void)
    * accept incoming requests from a remote client.
    * the server will create a thread to handle the
    * request, and the parent will continue to listen for the
-   * next request - up to 3 clients
+   * next request - up to 10 clients
    */
-  while (numClients < 3) 
+  while (numClients < 10) 
   {
 	printf("[SERVER] : Ready to accept()\n");
         fflush(stdout);	
@@ -129,12 +129,12 @@ int main (void)
   // once we reach 3 clients - let's go into a busy "join" loop waiting for
   // all of the clients to finish and join back up to this main thread
   printf("\n[SERVER] : Now we wait for the threads to complete ... \n");
-  for(i=0; i<3; i++)
+  for(i=0; i<10; i++)
   {
         int joinStatus = pthread_join(tid[i], (void *)(&whichClient));
 	if(joinStatus == 0)
 	{
-	  printf("\n[SERVER] : received QUIT command from CLIENT-%02d (joinStatus=%d)\n", whichClient, joinStatus);
+	  printf("\n[SERVER] : received >>bye<< command from CLIENT-%02d (joinStatus=%d)\n", whichClient, joinStatus);
 	}
   }
 
@@ -167,7 +167,7 @@ void *socketThread(void *clientSocket)
 
   numBytesRead = read (clSocket, buffer, BUFSIZ);
 
-  while(strcmp(buffer,"quit") != 0)
+  while(strcmp(buffer,">>bye<<") != 0)
   {
     /* we're actually not going to execute the command - but we could if we wanted */
     sprintf (message, "[SERVER (Thread-%02d)] : Received %d bytes - command - %s\n", iAmClient, numBytesRead, buffer);

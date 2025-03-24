@@ -87,13 +87,13 @@ int main (int argc, char *argv[])
       * now that we have a connection, get a commandline from
       * the user, and fire it off to the server
       */
-     printf ("Enter a command [date | who | df | <enter your own command> | quit] >>> ");
+     printf ("Enter a command [date | who | df | <enter your own command> | >>bye<<] >>> ");
      fflush (stdout);
      fgets (buffer, sizeof (buffer), stdin);
      if (buffer[strlen (buffer) - 1] == '\n') buffer[strlen (buffer) - 1] = '\0';
 
      /* check if the user wants to quit */
-     if(strcmp(buffer,"quit") == 0)
+     if(strcmp(buffer,">>bye<<") == 0)
      {
 	// send the command to the SERVER
        write (my_server_socket, buffer, strlen (buffer));
