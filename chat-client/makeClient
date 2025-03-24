@@ -8,7 +8,7 @@
 #
 # FINAL BINARY Target
 ./bin/tcpipClient : ./obj/tcpipClient.o
-	cc ./obj/tcpipClient.o -o ./bin/tcpipClient
+	cc ./obj/tcpipClient.o -lncurses  -o ./bin/tcpipClient
 #
 # =======================================================
 #                     Dependencies

@@ -29,12 +29,18 @@ void *socketThread(void *);
 // global variable to keep count of the number of clients ...
 static int numClients = 0;
 
+typedef struct{
+	char IP[16];
+	char userID[6];
+}userInfo;
+
 int main (void)
 {
   int                server_socket, client_socket;
   int                client_len;
   struct sockaddr_in client_addr, server_addr;
   int                len, i;
+  userInfo	     userList[10];
   pthread_t	     tid[10];		//array capable of holding up to 10 "connection" threads
   int                whichClient;	
 
@@ -167,10 +173,13 @@ void *socketThread(void *clientSocket)
 
   numBytesRead = read (clSocket, buffer, BUFSIZ);
 
+  //Before entering loop, read user information, input it into client array
+
   while(strcmp(buffer,">>bye<<") != 0)
   {
     /* we're actually not going to execute the command - but we could if we wanted */
     sprintf (message, "[SERVER (Thread-%02d)] : Received %d bytes - command - %s\n", iAmClient, numBytesRead, buffer);
+    //Change this to send a message to all clients instead of just one - Loop through our array?
     write (clSocket, message, strlen(message)); 
 
     // clear out and get the next command and process
