@@ -1,0 +1,25 @@
+#
+# this makefile will compile and link the tcpipServer application
+# 
+# =======================================================
+#                  tcpipServer
+# =======================================================
+#
+# FINAL BINARY Target
+./bin/tcpipServer : ./obj/tcpipServer.o
+	cc ./obj/tcpipServer.o -o ./bin/tcpipServer -lpthread
+#
+# =======================================================
+#                     Dependencies
+# =======================================================                     
+./obj/tcpipServer.o : ./src/tcpip-server.c
+	cc -c ./src/tcpip-server.c -o ./obj/tcpipServer.o
+
+#
+# =======================================================
+# Other targets
+# =======================================================                     
+clean:
+	rm -f ./bin/tcpipServer*
+	rm -f ./obj/tcpipServer.*
+	rm -f ./src/tcpip-server.c~

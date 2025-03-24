@@ -1,0 +1,26 @@
+#
+# this makefile will compile and link the tcpipClient application
+# 
+# =======================================================
+#                  tcpipClient
+# =======================================================
+#
+#
+# FINAL BINARY Target
+./bin/tcpipClient : ./obj/tcpipClient.o
+	cc ./obj/tcpipClient.o -o ./bin/tcpipClient
+#
+# =======================================================
+#                     Dependencies
+# =======================================================                     
+./obj/tcpipClient.o : ./src/tcpip-client.c
+	cc -c ./src/tcpip-client.c -o ./obj/tcpipClient.o
+
+#
+# =======================================================
+# Other targets
+# =======================================================                     
+clean:
+	rm -f ./bin/tcpipClient*
+	rm -f ./obj/tcpipClient.*
+	rm -f ./src/tcpip-client.c~
