@@ -19,16 +19,19 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include <ncurses.h>
+#include <pthread.h>
 
 #define PORT 5000
 
-WINDOW *create_newwin(int, int, int, int);
+WINDOW *create_newwin(int, int, int, int,int);
+WINDOW *msg_win;
 void destroy_win(WINDOW *);
 void input_win(WINDOW *, char *);
 void display_win(WINDOW *, char *, int, int);
 void destroy_win(WINDOW *win);
 void blankWin(WINDOW *win);
-
+void init_color_pair();
+void* receive_messages(void* arg);
 
 char buffer[BUFSIZ];
 
@@ -42,9 +45,6 @@ int main (int argc, char *argv[])
   char userID[128];
   char serverName[128];
 
-  //strcpy(clientName, "Test");
-  strncpy(clientName, userID, sizeof(clientName) - 1);
-  clientName[sizeof(clientName) - 1] = '\0'; 
 
   /*
    * check for sanity
@@ -72,6 +72,9 @@ int main (int argc, char *argv[])
     printf("ERROR: The -user and -server must be provided.\n");
     return 1;
   }
+    //strcpy(clientName, "Test");
+  strncpy(clientName, userID, sizeof(clientName) - 1);
+  clientName[sizeof(clientName) - 1] = '\0'; 
 
   if (strlen(userID) > 5) 
   {
@@ -89,7 +92,7 @@ int main (int argc, char *argv[])
   }
 
   //Recieve client's IP to be used in message
-
+  
   /*
    * initialize struct to get a socket to host
    */
@@ -122,7 +125,7 @@ int main (int argc, char *argv[])
     return 4;
   }
 
-  WINDOW *chat_win, *msg_win;
+  WINDOW *chat_win;
   int chat_startx, chat_starty, chat_width, chat_height;
   int msg_startx, msg_starty, msg_width, msg_height, i;
   int shouldBlank;
@@ -131,8 +134,9 @@ int main (int argc, char *argv[])
   initscr();                      /* Start curses mode            */
   cbreak();
   noecho();
+  init_color_pair();
   refresh();
-
+  
   shouldBlank = 0;
 
   chat_height = 5;
@@ -146,13 +150,15 @@ int main (int argc, char *argv[])
   msg_starty = 0;
 
   /* create the input window */
-  msg_win = create_newwin(msg_height, msg_width, msg_starty, msg_startx);
+  msg_win = create_newwin(msg_height, msg_width, msg_starty, msg_startx,1);
   scrollok(msg_win, TRUE);
 
   /* create the output window */
-  chat_win = create_newwin(chat_height, chat_width, chat_starty, chat_startx);
+  chat_win = create_newwin(chat_height, chat_width, chat_starty, chat_startx,2);
   scrollok(chat_win, TRUE);
 
+  pthread_t recv_thread;
+  pthread_create(&recv_thread, NULL, receive_messages, (void*)&my_server_socket);
 
   done = 1;
   while(done)
@@ -184,8 +190,8 @@ int main (int argc, char *argv[])
      else
      {
        write (my_server_socket, message, strlen (message));
-       len = read (my_server_socket, buffer, sizeof (buffer));
-       display_win(msg_win, buffer, 10, shouldBlank);
+       //len = read (my_server_socket, buffer, sizeof (buffer));
+       //display_win(msg_win, buffer, 10, shouldBlank);
      }
 
   }
@@ -198,6 +204,8 @@ int main (int argc, char *argv[])
   destroy_win(msg_win);
   endwin();
 
+  pthread_join(recv_thread, NULL);
+
   close (my_server_socket);
 
   printf ("[CLIENT] : I'm outta here !\n");
@@ -205,11 +213,27 @@ int main (int argc, char *argv[])
   return 0;
 }
 
-WINDOW *create_newwin(int height, int width, int starty, int startx)
+void init_color_pair(){
+  if(start_color() ==ERR){
+	endwin();
+	fprintf(stderr,"Could not initialize color\n");
+	exit(1);
+  }
+  if(has_colors() ==FALSE){
+ 	endwin();
+	fprintf(stderr,"Your terminal does not support color\n");
+	exit(1);
+  }
+  
+  init_pair(1,COLOR_RED,COLOR_BLACK);
+  init_pair(2,COLOR_GREEN,COLOR_BLACK);
+}
+WINDOW *create_newwin(int height, int width, int starty, int startx,int color_pair)
 {
   WINDOW *local_win;
 
   local_win = newwin(height, width, starty, startx);
+  wbkgd(local_win,COLOR_PAIR(color_pair));
   box(local_win, 0, 0);               /* draw a box */
   wmove(local_win, 1, 1);             /* position cursor at top */
   wrefresh(local_win);
@@ -285,3 +309,19 @@ void blankWin(WINDOW *win)
   wrefresh(win);
 }  /* blankWin */
 
+
+void* receive_messages(void* arg) 
+{
+    int sock = *((int*)arg);
+    char recv_buf[BUFSIZ];
+
+    while (1) {
+        memset(recv_buf, 0, BUFSIZ);
+        int len = read(sock, recv_buf, BUFSIZ);
+        if (len <= 0) break;
+
+        display_win(msg_win, recv_buf, 10, 0);
+    }
+
+    pthread_exit(NULL);
+}
