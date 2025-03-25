@@ -33,6 +33,9 @@ typedef struct{
 	char IP[16];
 	char userID[6];
 }userInfo;
+struct sockaddr_in addr;
+socklen_t addr_len;
+char IP[INET_ADDRSTRLEN];
 
 int main (void)
 {
@@ -42,7 +45,8 @@ int main (void)
   int                len, i;
   userInfo	     userList[10];
   pthread_t	     tid[10];		//array capable of holding up to 10 "connection" threads
-  int                whichClient;	
+  int                whichClient;
+  char		     message[79];  
 
   /*
    * obtain a socket for the server
@@ -106,7 +110,7 @@ int main (void)
           fflush(stdout);	
           return 4;
 	}
-
+	printf("%d\n", client_socket);
         numClients++;
 	printf("[SERVER] : received a packet from CLIENT-%02d\n", numClients);
         fflush(stdout);	
@@ -128,6 +132,12 @@ int main (void)
 
 	printf("[SERVER] : pthread_create() successful for CLIENT-%02d\n", numClients);
         fflush(stdout);	
+	//UPDATE CLIENT ARRAY HERE!!!
+	 if (inet_ntop(AF_INET, &client_addr, IP, INET_ADDRSTRLEN) == NULL) {
+               perror("inet_ntop");
+               exit(EXIT_FAILURE);
+           }
+	 printf("%s\n", IP);
 
 
   }
@@ -157,7 +167,7 @@ void *socketThread(void *clientSocket)
 {
   // used for accepting incoming command and also holding the command's response
   char buffer[BUFSIZ];
-  char message[BUFSIZ];
+  char message[79];
   int sizeOfRead;
   int numBytesRead;
 
@@ -170,7 +180,6 @@ void *socketThread(void *clientSocket)
   // increment the numClients
   int iAmClient = numClients;	// assumes that another connection from another client 
 				// hasn't been created in the meantime
-
   numBytesRead = read (clSocket, buffer, BUFSIZ);
 
   //Before entering loop, read user information, input it into client array
@@ -180,6 +189,14 @@ void *socketThread(void *clientSocket)
     /* we're actually not going to execute the command - but we could if we wanted */
     sprintf (message, "[SERVER (Thread-%02d)] : Received %d bytes - command - %s\n", iAmClient, numBytesRead, buffer);
     //Change this to send a message to all clients instead of just one - Loop through our array?
+    strcpy(message, IP);
+    strcat(message, buffer);
+    time_t t = time(NULL);
+    struct tm * time_info;
+    time_info = localtime(&t);
+  char time[10];
+  strftime(time, sizeof(time), "%H:%M:%S", time_info);
+  strcat(message, time);
     write (clSocket, message, strlen(message)); 
 
     // clear out and get the next command and process
@@ -195,6 +212,5 @@ void *socketThread(void *clientSocket)
   printf ("[SERVER (Thread-%02d)] : closing socket\n", iAmClient);
   pthread_exit((void *)iAmClient);
 }
-
 
 

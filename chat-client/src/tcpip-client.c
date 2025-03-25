@@ -37,6 +37,10 @@ int main (int argc, char *argv[])
   int                my_server_socket, len, done;
   struct sockaddr_in server_addr;
   struct hostent*    host;
+  char clientName[6];
+  char message[48];
+
+  strcpy(clientName, "Test");
 
   /*
    * check for sanity
@@ -137,17 +141,20 @@ int main (int argc, char *argv[])
      input_win(chat_win, buffer);//TODO: Limit input to 80 characters
      //If needed - Split message
      //Format message according to requirements
+     strcpy(message, clientName);
+     strcat(message, ">>");
+     strcat(message, buffer);
 
      /* check if the user wants to quit */
      if(strcmp(buffer,">>bye<<") == 0)
      {
 	// send the command to the SERVER
-       write (my_server_socket, buffer, strlen (buffer));
+       write (my_server_socket, message, strlen (message));
        done = 0;
      }
      else
      {
-       write (my_server_socket, buffer, strlen (buffer));
+       write (my_server_socket, message, strlen (message));
        len = read (my_server_socket, buffer, sizeof (buffer));
        display_win(msg_win, buffer, 10, shouldBlank);
      }
