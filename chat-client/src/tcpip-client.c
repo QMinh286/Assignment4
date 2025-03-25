@@ -22,13 +22,13 @@
 
 #define PORT 5000
 
-WINDOW *create_newwin(int, int, int, int);
+WINDOW *create_newwin(int, int, int, int,int);
 void destroy_win(WINDOW *);
 void input_win(WINDOW *, char *);
 void display_win(WINDOW *, char *, int, int);
 void destroy_win(WINDOW *win);
 void blankWin(WINDOW *win);
-
+void init_color_pair();
 
 char buffer[BUFSIZ];
 
@@ -103,8 +103,9 @@ int main (int argc, char *argv[])
   initscr();                      /* Start curses mode            */
   cbreak();
   noecho();
+  init_color_pair();
   refresh();
-
+  
   shouldBlank = 0;
 
   chat_height = 5;
@@ -118,11 +119,11 @@ int main (int argc, char *argv[])
   msg_starty = 0;
 
   /* create the input window */
-  msg_win = create_newwin(msg_height, msg_width, msg_starty, msg_startx);
+  msg_win = create_newwin(msg_height, msg_width, msg_starty, msg_startx,1);
   scrollok(msg_win, TRUE);
 
   /* create the output window */
-  chat_win = create_newwin(chat_height, chat_width, chat_starty, chat_startx);
+  chat_win = create_newwin(chat_height, chat_width, chat_starty, chat_startx,2);
   scrollok(chat_win, TRUE);
 
 
@@ -177,11 +178,27 @@ int main (int argc, char *argv[])
   return 0;
 }
 
-WINDOW *create_newwin(int height, int width, int starty, int startx)
+void init_color_pair(){
+  if(start_color() ==ERR){
+	endwin();
+	fprintf(stderr,"Could not initialize color\n");
+	exit(1);
+  }
+  if(has_colors() ==FALSE){
+ 	endwin();
+	fprintf(stderr,"Your terminal does not support color\n");
+	exit(1);
+  }
+  
+  init_pair(1,COLOR_RED,COLOR_BLACK);
+  init_pair(2,COLOR_GREEN,COLOR_BLACK);
+}
+WINDOW *create_newwin(int height, int width, int starty, int startx,int color_pair)
 {
   WINDOW *local_win;
 
   local_win = newwin(height, width, starty, startx);
+  wbkgd(local_win,COLOR_PAIR(color_pair));
   box(local_win, 0, 0);               /* draw a box */
   wmove(local_win, 1, 1);             /* position cursor at top */
   wrefresh(local_win);
