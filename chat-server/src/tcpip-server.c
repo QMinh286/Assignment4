@@ -23,16 +23,17 @@
 
 #define PORT 5000
 
+typedef struct{
+	int *socket;
+}userInfo;
 // thread function prototype
 void *socketThread(void *);
 
 // global variable to keep count of the number of clients ...
 static int numClients = 0;
+userInfo	userList[10];
 
-typedef struct{
-	char IP[16];
-	char userID[6];
-}userInfo;
+
 struct sockaddr_in addr;
 socklen_t addr_len;
 char IP[INET_ADDRSTRLEN];
@@ -43,10 +44,15 @@ int main (void)
   int                client_len;
   struct sockaddr_in client_addr, server_addr;
   int                len, i;
-  userInfo	     userList[10];
   pthread_t	     tid[10];		//array capable of holding up to 10 "connection" threads
   int                whichClient;
-  char		     message[79];  
+  char		     message[79];
+
+//Initialize array - socket values = -1
+	for(i = 0; i < 10; i++){
+		userList[i].socket = -1;
+		printf("Initial socket value is: %d", userList[i].socket);
+	}  
 
   /*
    * obtain a socket for the server
@@ -111,6 +117,15 @@ int main (void)
           return 4;
 	}
 	printf("%d\n", client_socket);
+				
+				for(int i = 0; i < 10; i++){
+					if (userList[i].socket == -1){
+						userList[i].socket = client_socket;
+						break;
+					}
+					
+						printf("Socket in element %d changed to %d", i, client_socket);
+				}
         numClients++;
 	printf("[SERVER] : received a packet from CLIENT-%02d\n", numClients);
         fflush(stdout);	
@@ -174,6 +189,13 @@ void *socketThread(void *clientSocket)
   // remap the clientSocket value (which is a void*) back into an INT
   int clSocket = *((int*)clientSocket);
 
+	for(int i = 0; i < 10; i++){
+		if (userList[i].socket == -1){
+			userList[i].socket = clSocket;
+			printf("Socket in element %d changed to %d", i, clSocket);
+			break;
+		}
+	}
   /* Clear out the input Buffer */
   memset(buffer,0,BUFSIZ);
 
@@ -200,7 +222,14 @@ void *socketThread(void *clientSocket)
   strftime(time, sizeof(time), "%H:%M:%S", time_info);
   strcat(message, time);
     write (clSocket, message, strlen(message)); 
-
+		
+		for (int i = 0; i < 10; i++){
+			if(userList[i].socket != -1 && userList[i].socket != clSocket){
+				write(userList[i].socket, message, strlen(message));
+				printf("User %d's Socket: %d", i, userList[i].socket);
+			}
+		}
+		
     // clear out and get the next command and process
     memset(buffer,0,BUFSIZ);
     numBytesRead = read (clSocket, buffer, BUFSIZ);
