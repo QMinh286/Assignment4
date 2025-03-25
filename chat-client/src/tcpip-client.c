@@ -34,27 +34,55 @@ char buffer[BUFSIZ];
 
 int main (int argc, char *argv[])
 {
-  int                my_server_socket, len, done;
+  int my_server_socket, len, done;
   struct sockaddr_in server_addr;
   struct hostent*    host;
   char clientName[6];
   char message[48];
+  char userID[128];
+  char serverName[128];
 
-  strcpy(clientName, "Test");
+  //strcpy(clientName, "Test");
+  strncpy(clientName, userID, sizeof(clientName) - 1);
+  clientName[sizeof(clientName) - 1] = '\0'; 
 
   /*
    * check for sanity
    */
-  if (argc != 2) 
+  if (argc != 3) 
   {
-    printf ("USAGE : tcpipClient <server_name>\n");
+    printf ("USAGE : %s -user<userID> -server<serverName>\n", argv[0]);
+    return 1;
+  }
+
+    for (int i = 1; i < argc; i++) 
+  {
+    if (strncmp(argv[i], "-user", 5) == 0) 
+    {
+      strcpy(userID, argv[i] + 5); 
+    } 
+    else if (strncmp(argv[i], "-server", 7) == 0) 
+    {
+      strcpy(serverName, argv[i] + 7); 
+    }
+  }
+
+  if (strlen(userID) == 0 || strlen(serverName) == 0) 
+  {
+    printf("ERROR: The -user and -server must be provided.\n");
+    return 1;
+  }
+
+  if (strlen(userID) > 5) 
+  {
+    printf("ERROR: The userID must be a maximum of 5 characters.\n");
     return 1;
   }
 
   /*
    * determine host info for server name supplied
    */
-  if ((host = gethostbyname (argv[1])) == NULL) 
+  if ((host = gethostbyname (serverName)) == NULL) 
   {
     printf ("[CLIENT] : Host Info Search - FAILED\n");
     return 2;
@@ -70,29 +98,29 @@ int main (int argc, char *argv[])
   memcpy (&server_addr.sin_addr, host->h_addr, host->h_length); // copy the host's internal IP addr into the server_addr struct
   server_addr.sin_port = htons (PORT);
 
-     /*
-      * get a socket for communications
-      */
-     printf ("[CLIENT] : Getting STREAM Socket to talk to SERVER\n");
-     fflush(stdout);
-     if ((my_server_socket = socket (AF_INET, SOCK_STREAM, 0)) < 0) 
-     {
-       printf ("[CLIENT] : Getting Client Socket - FAILED\n");
-       return 3;
-     }
+  /*
+  * get a socket for communications
+  */
+  printf ("[CLIENT] : Getting STREAM Socket to talk to SERVER\n");
+  fflush(stdout);
+  if ((my_server_socket = socket (AF_INET, SOCK_STREAM, 0)) < 0) 
+  {
+    printf ("[CLIENT] : Getting Client Socket - FAILED\n");
+    return 3;
+  }
 
-  
-     /*
-      * attempt a connection to server
-      */
-     printf ("[CLIENT] : Connecting to SERVER\n");
-     fflush(stdout);
-     if (connect (my_server_socket, (struct sockaddr *)&server_addr,sizeof (server_addr)) < 0) 
-     {
-       printf ("[CLIENT] : Connect to Server - FAILED\n");
-       close (my_server_socket);
-       return 4;
-     }
+
+  /*
+  * attempt a connection to server
+  */
+  printf ("[CLIENT] : Connecting to SERVER\n");
+  fflush(stdout);
+  if (connect (my_server_socket, (struct sockaddr *)&server_addr,sizeof (server_addr)) < 0) 
+  {
+    printf ("[CLIENT] : Connect to Server - FAILED\n");
+    close (my_server_socket);
+    return 4;
+  }
 
   WINDOW *chat_win, *msg_win;
   int chat_startx, chat_starty, chat_width, chat_height;
