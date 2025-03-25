@@ -190,7 +190,9 @@ void *socketThread(void *clientSocket)
     sprintf (message, "[SERVER (Thread-%02d)] : Received %d bytes - command - %s\n", iAmClient, numBytesRead, buffer);
     //Change this to send a message to all clients instead of just one - Loop through our array?
     strcpy(message, IP);
+    strcat(message, " ");
     strcat(message, buffer);
+    strcat(message, " ");
     time_t t = time(NULL);
     struct tm * time_info;
     time_info = localtime(&t);

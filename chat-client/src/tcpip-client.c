@@ -141,8 +141,9 @@ int main (int argc, char *argv[])
      input_win(chat_win, buffer);//TODO: Limit input to 80 characters
      //If needed - Split message
      //Format message according to requirements
-     strcpy(message, clientName);
-     strcat(message, ">>");
+     strcpy(message, "[");
+     strcat(message, clientName);
+     strcat(message, "] >> ");
      strcat(message, buffer);
 
      /* check if the user wants to quit */
