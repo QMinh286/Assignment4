@@ -1,3 +1,7 @@
+vpath %.c src
+vpath %.h inc
+
+CFLAGS = -Iinc -ggdb -o0
 #
 # this makefile will compile and link the tcpipServer application
 # 
@@ -12,7 +16,7 @@
 # =======================================================
 #                     Dependencies
 # =======================================================                     
-./obj/tcpipServer.o : ./src/tcpip-server.c
+./obj/tcpipServer.o : ./src/tcpip-server.c ./inc/chat-server.h
 	cc -c ./src/tcpip-server.c -o ./obj/tcpipServer.o
 
 #

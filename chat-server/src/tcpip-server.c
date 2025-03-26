@@ -1,73 +1,39 @@
 /*
- * tcpip-server.c
- *
- * This is a sample socket server using threads
- * to requests on port 5000
- */
+*	FILE:					tcpip-server.c
+*	ASSIGNMENT:		The "Can We Talk?" System
+*	PROGRAMMERS:	Jose Morales Gutierrez, Oliver Gingerich, Quang Minh Vu
+*	DESCRIPTION:	This file holds the functions required for the chat server to function.
+*/
 
-#include <stdio.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <signal.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <pthread.h>
+#include "../inc/chat-server.h"
 
-#define PORT 5000
-
-typedef struct{
-	int *socket;
-}userInfo;
-// thread function prototype
-void *socketThread(void *);
-
-// global variable to keep count of the number of clients ...
-static int numClients = 0;
-userInfo	userList[10];
-
-
-struct sockaddr_in addr;
-socklen_t addr_len;
-char IP[INET_ADDRSTRLEN];
+//===GLOBALS===//
+static int	numClients = 0;
+userInfo		userList[10];
+struct 			sockaddr_in addr;
+socklen_t 	addr_len;
+char 				IP[INET_ADDRSTRLEN];
 
 int main (void)
 {
-  int                server_socket, client_socket;
-  int                client_len;
-  struct sockaddr_in client_addr, server_addr;
-  int                len, i;
-  pthread_t	     tid[10];		//array capable of holding up to 10 "connection" threads
-  int                whichClient;
-  char		     message[79];
+	//===VARIABLES===//
+  int       server_socket, client_socket;
+  int       client_len;
+  struct 		sockaddr_in client_addr, server_addr;
+  int       len, i;
+  pthread_t	tid[10];
+  int       whichClient;
+  char		  message[79];
 
-//Initialize array - socket values = -1
-	for(i = 0; i < 10; i++){
-		userList[i].socket = -1;
-		printf("Initial socket value is: %d", userList[i].socket);
-	}  
-
-  /*
-   * obtain a socket for the server
-   */
+	initializeArray();
 
   if ((server_socket = socket (AF_INET, SOCK_STREAM, 0)) < 0) 
   {
     printf ("[SERVER] : socket() FAILED\n");
     return 1;
   }
-  printf("[SERVER] : socket() successful\n");
-	
-  /*
-   * initialize our server address info for binding purposes
-   */
+  	
+  //===INITIALIZING MEMORY===//
   memset (&server_addr, 0, sizeof (server_addr));
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = htonl (INADDR_ANY);
@@ -79,169 +45,157 @@ int main (void)
     close (server_socket);
     return 2;
   }
-  printf ("[SERVER] : bind() successful\n");
-  
-  /*
-   * start listening on the socket
-   */
+    
   if (listen (server_socket, 5) < 0) 
   {
     printf ("[SERVER] : listen() - FAILED.\n");
     close (server_socket);
     return 3;
   }
-  printf ("[SERVER] : listen() successful\n");
-
-
-
-  /*
-   * for this server, run an endless loop that will
-   * accept incoming requests from a remote client.
-   * the server will create a thread to handle the
-   * request, and the parent will continue to listen for the
-   * next request - up to 10 clients
-   */
+  
+//===MAIN LOOP===//
   while (numClients < 10) 
   {
-	printf("[SERVER] : Ready to accept()\n");
-        fflush(stdout);	
+		fflush(stdout);	
 	
-       /*
-	* accept a packet from the client
-	*/
-	client_len = sizeof (client_addr);
-	if ((client_socket = accept (server_socket,(struct sockaddr *)&client_addr, &client_len)) < 0) 
-	{
-          printf ("[SERVER] : accept() FAILED\n");
-          fflush(stdout);	
-          return 4;
-	}
-	printf("%d\n", client_socket);
-				
-				for(int i = 0; i < 10; i++){
-					if (userList[i].socket == -1){
-						userList[i].socket = client_socket;
-						break;
-					}
-					
-						printf("Socket in element %d changed to %d", i, client_socket);
-				}
-        numClients++;
-	printf("[SERVER] : received a packet from CLIENT-%02d\n", numClients);
-        fflush(stdout);	
+		client_len = sizeof (client_addr);
+		if ((client_socket = accept (server_socket,(struct sockaddr *)&client_addr, &client_len)) < 0) 
+		{
+     	printf ("[SERVER] : accept() FAILED\n");
+      fflush(stdout);	
+      return 4;
+		}
 
-        /*
-         * rather than fork and spawn the execution of the command within a 
-         * child task - let's take a look at something else we could do ...
-         *
-         * ... we'll create a thread of execution within this task to take
-         * care of executing the task.  We'll be looking at THREADING in a 
-         * couple modules from now ...
-         */
-	if (pthread_create(&(tid[(numClients-1)]), NULL, socketThread, (void *)&client_socket))
-	{
-	  printf ("[SERVER] : pthread_create() FAILED\n");
-          fflush(stdout);	
-	  return 5;
-	}
+		if (inet_ntop(AF_INET, &client_addr, IP, INET_ADDRSTRLEN) == NULL) {
+			perror("inet_ntop");
+      exit(EXIT_FAILURE);
+   	}
 
-	printf("[SERVER] : pthread_create() successful for CLIENT-%02d\n", numClients);
-        fflush(stdout);	
-	//UPDATE CLIENT ARRAY HERE!!!
-	 if (inet_ntop(AF_INET, &client_addr, IP, INET_ADDRSTRLEN) == NULL) {
-               perror("inet_ntop");
-               exit(EXIT_FAILURE);
-           }
-	 printf("%s\n", IP);
+		updateArray(client_socket);
+		fflush(stdout);	
 
+		if (pthread_create(&(tid[(numClients-1)]), NULL, socketThread, (void *)&client_socket))
+		{
+	  	printf ("[SERVER] : pthread_create() FAILED\n");
+      fflush(stdout);	
+	  	return 5;
+		}
 
+		fflush(stdout);	
   }
-
-  // once we reach 3 clients - let's go into a busy "join" loop waiting for
-  // all of the clients to finish and join back up to this main thread
-  printf("\n[SERVER] : Now we wait for the threads to complete ... \n");
+	//===CHAT FULL===//
+  printf("\n[SERVER] CHAT FULL: Waiting for client to leave. \n");
   for(i=0; i<10; i++)
   {
-        int joinStatus = pthread_join(tid[i], (void *)(&whichClient));
-	if(joinStatus == 0)
-	{
-	  printf("\n[SERVER] : received >>bye<< command from CLIENT-%02d (joinStatus=%d)\n", whichClient, joinStatus);
-	}
+  	int joinStatus = pthread_join(tid[i], (void *)(&whichClient));
+		if(joinStatus == 0)
+		{
+	  	printf("\n[SERVER] CHAT SPOT OPENED (joinStatus=%d)\n", whichClient, joinStatus);
+		}
   }
-
-  printf("\n[SERVER] : All clients have returned - exiting ...\n");
+	//===CLEANUP===//
   close (server_socket);
   return 0;
 }
 
-// 
-// Socket handler - this function is called (spawned as a thread of execution)
-//
-
+//==================================================FUNCTION==========================================================|
+//Name:					socketThread 																																													|
+//Params:				void*	clientSocket	The socket for the thread to connect to.																					|
+//Returns:			NONE 																																																	|
+//Outputs:			NONE																																																	|
+//Description:	This function represents a thread to handle the connection between the server and one of the clients.	| 
+//====================================================================================================================|
 void *socketThread(void *clientSocket)
 {
-  // used for accepting incoming command and also holding the command's response
+  //===VARIABLES===//
   char buffer[BUFSIZ];
   char message[79];
   int sizeOfRead;
   int numBytesRead;
-
-  // remap the clientSocket value (which is a void*) back into an INT
   int clSocket = *((int*)clientSocket);
-
-	for(int i = 0; i < 10; i++){
-		if (userList[i].socket == -1){
-			userList[i].socket = clSocket;
-			printf("Socket in element %d changed to %d", i, clSocket);
-			break;
-		}
-	}
-  /* Clear out the input Buffer */
+    
   memset(buffer,0,BUFSIZ);
 
-  // increment the numClients
-  int iAmClient = numClients;	// assumes that another connection from another client 
-				// hasn't been created in the meantime
-  numBytesRead = read (clSocket, buffer, BUFSIZ);
+  int iAmClient = numClients;	 
 
-  //Before entering loop, read user information, input it into client array
+  numBytesRead = read (clSocket, buffer, BUFSIZ);
 
   while(strcmp(buffer,">>bye<<") != 0)
   {
-    /* we're actually not going to execute the command - but we could if we wanted */
-    sprintf (message, "[SERVER (Thread-%02d)] : Received %d bytes - command - %s\n", iAmClient, numBytesRead, buffer);
-    //Change this to send a message to all clients instead of just one - Loop through our array?
+    //===MESSAGE FORMAT===//
     strcpy(message, IP);
     strcat(message, " ");
     strcat(message, buffer);
     strcat(message, " ");
+
     time_t t = time(NULL);
     struct tm * time_info;
-    time_info = localtime(&t);
-  char time[10];
-  strftime(time, sizeof(time), "%H:%M:%S", time_info);
-  strcat(message, time);
+    time_info = localtime(&t);  	
+  	char timeChar[10];
+  	strftime(timeChar, sizeof(timeChar), "%H:%M:%S", time_info);
+
+  	strcat(message, timeChar);
     write (clSocket, message, strlen(message)); 
+
+		writeToClients(clSocket, message);
 		
-		for (int i = 0; i < 10; i++){
-			if(userList[i].socket != -1 && userList[i].socket != clSocket){
-				write(userList[i].socket, message, strlen(message));
-				printf("User %d's Socket: %d", i, userList[i].socket);
-			}
-		}
-		
-    // clear out and get the next command and process
     memset(buffer,0,BUFSIZ);
     numBytesRead = read (clSocket, buffer, BUFSIZ);
   }
+	//===SHUTDOWN===//
   close(clSocket);
-  
-  // decrement the number of clients
   numClients--;
 
-  // exit the thread and allow it to be joined in sequence
-  printf ("[SERVER (Thread-%02d)] : closing socket\n", iAmClient);
   pthread_exit((void *)iAmClient);
 }
 
 
+//==================================================FUNCTION==============================|
+//Name:					initializeArray 																													|
+//Params:				NONE																																			|
+//Returns:			NONE 																																			|
+//Outputs:			NONE																																			|
+//Description:	This function initializes the userList array to remove any garbage data.	| 
+//========================================================================================|
+void initializeArray(void){
+	
+	for(int i = 0; i < 10; i++){
+		userList[i].socket = -1;
+		}
+} 
+
+
+//==================================================FUNCTION================================|
+//Name:					updateArray 																																|
+//Params:				int	client_socket	the socket of the client that needs updating.							|
+//Returns:			NONE 																																				|
+//Outputs:			NONE																																				|
+//Description:	This function updates the userList array, adding socket and IP information.	| 
+//==========================================================================================|
+void updateArray(int client_socket){
+
+	for(int i = 0; i < 10; i++){
+		if (userList[i].socket == -1){
+			userList[i].socket = client_socket;
+			numClients++;
+			break;
+		}
+	}
+}
+
+//==================================================FUNCTION========================|
+//Name:					writeToClients 																											|
+//Params:				int*	clSocket	The socket of the client that sent the message.			|
+//							char	message		The message to be sent to clients.									|
+//Returns:			NONE 																																|
+//Outputs:			NONE																																|
+//Description:	This function distributes a recieved message to all active clients.	| 
+//==================================================================================|
+void writeToClients(int* clSocket, char message[]){
+
+		for (int i = 0; i < 10; i++){
+			if(userList[i].socket != -1 && userList[i].socket != clSocket){
+				write(userList[i].socket, message, strlen(message));
+			}
+		}
+} 
