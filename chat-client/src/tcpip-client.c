@@ -200,9 +200,13 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-/**
- * Initialize color pairs for ncurses
- */
+//==================================================FUNCTION========================|
+//Name:           init_color_pair                                                   |
+//Params:         NONE                                                              |
+//Returns:        NONE                                                              |
+//Outputs:        NONE                                                              |
+//Description:    This function initializes the color pairs for ncurses.            |
+//==================================================================================|
 void init_color_pair()
 {
     if (start_color() == ERR)
@@ -222,9 +226,17 @@ void init_color_pair()
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
 }
 
-/**
- * Create a new window with a box around it
- */
+//==================================================FUNCTION========================|
+//Name:           create_newwin                                                     |
+//Params:         int height        The height of the window.                       |
+//                int width        The width of the window.                         |
+//                int starty       The starting y-coordinate of the window.         |
+//                int startx       The starting x-coordinate of the window.         |
+//                int color_pair    The color pair for the window.                  |
+//Returns:              WINDOW*         A pointer to the newly created window.      |
+//Outputs:              NONE                                                        |
+//Description:    This function creates a new window with a box around it and sets the background color.|
+//==================================================================================|
 WINDOW *create_newwin(int height, int width, int starty, int startx, int color_pair)
 {
     WINDOW *local_win;
@@ -236,10 +248,15 @@ WINDOW *create_newwin(int height, int width, int starty, int startx, int color_p
     wrefresh(local_win);
     return local_win;
 }
-
-/**
- * Take input from the user with 80 character limit
- */
+//==================================================FUNCTION========================|
+//Name:           input_win                                                         |
+//Params:         WINDOW *win       The window to get input from.                   |
+//                char *word          The buffer to store the input.                |
+//Returns:        NONE                                                              |
+//Outputs:        NONE                                                              |
+//Description:    This function handles taking input from the user, displays it in the window,|
+//                  and enforces a maximum character limit.                         |
+//==================================================================================|
 void input_win(WINDOW *win, char *word)
 {
     int i, ch;
@@ -297,10 +314,16 @@ void input_win(WINDOW *win, char *word)
     word[i] = '\0'; // Ensure null termination
     wrefresh(win);
 }
-
-/**
- * Display a message in the message window
- */
+//==================================================FUNCTION========================|
+//Name:           display_win                                                       |
+//Params:         WINDOW *win      The window to display the message.               |
+//                char *word        The message to be displayed.                    |
+//                int whichRow     The row where the message will be displayed.     |
+//                int shouldBlank   A flag to determine if the window should be cleared before displaying.|
+//Returns:        NONE                                                              |
+//Outputs:        NONE                                                              |
+//Description:    This function displays a message in the given window at the specified row.|
+//==================================================================================|
 void display_win(WINDOW *win, char *word, int whichRow, int shouldBlank)
 {
     if (shouldBlank == 1)
@@ -310,17 +333,26 @@ void display_win(WINDOW *win, char *word, int whichRow, int shouldBlank)
     wrefresh(win);
 }
 
-/**
- * Destroy a window
- */
+
+//==================================================FUNCTION========================|
+//Name:           destroy_win                                                       |
+//Params:         WINDOW *win        The window to be destroyed.                    |
+//Returns:        NONE                                                              |
+//Outputs:        NONE                                                              |
+//Description:    This function destroys the specified window.                      |
+//==================================================================================|
 void destroy_win(WINDOW *win)
 {
     delwin(win);
 }
 
-/**
- * Clear a window but keep its border
- */
+//==================================================FUNCTION========================|
+//Name:           blankWin                                                          |
+//Params:         WINDOW *win        The window to be cleared.                      |
+//Returns:        NONE                                                              |
+//Outputs:        NONE                                                              |
+//Description:    This function clears the contents of the window but keeps its border.|
+//==================================================================================|
 void blankWin(WINDOW *win)
 {
     int i;
@@ -336,9 +368,13 @@ void blankWin(WINDOW *win)
     wrefresh(win);
 }
 
-/**
- * Add a message to the history and update the display
- */
+//==================================================FUNCTION========================|
+//Name:           add_to_history                                                    |
+//Params:         char *message        The message to be added to the history.      |
+//Returns:        NONE                                                              |
+//Outputs:        NONE                                                              |
+//Description:    This function adds a message to the message history and updates the display window.|
+//==================================================================================|
 void add_to_history(char *message)
 {
     pthread_mutex_lock(&history_mutex);
@@ -378,10 +414,13 @@ void add_to_history(char *message)
     
     pthread_mutex_unlock(&history_mutex);
 }
-
-/**
- * Thread function to receive and display messages from the server
- */
+//==================================================FUNCTION========================|
+//Name:           receive_messages                                                  |
+//Params:         void *arg        The socket to receive the message from.          |
+//Returns:        NONE                                                              |
+//Outputs:        NONE                                                              |
+//Description:    This function handles receiving messages from the server, parsing, and displaying them.|
+//==================================================================================|
 void *receive_messages(void *arg)
 {
     int sock = *((int *)arg);
