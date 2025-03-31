@@ -29,7 +29,7 @@ int main(void)
 
   if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
   {
-    printf("[SERVER] : socket() FAILED\n");
+    fprintf(stderr,"[SERVER] : socket() FAILED\n");
     return 1;
   }
 
@@ -41,14 +41,14 @@ int main(void)
 
   if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
   {
-    printf("[SERVER] : bind() FAILED\n");
+    fprintf(stderr,"[SERVER] : bind() FAILED\n");
     close(server_socket);
     return 2;
   }
 
   if (listen(server_socket, 5) < 0)
   {
-    printf("[SERVER] : listen() - FAILED.\n");
+    fprintf(stderr,"[SERVER] : listen() - FAILED.\n");
     close(server_socket);
     return 3;
   }
@@ -61,7 +61,7 @@ int main(void)
     client_len = sizeof(client_addr);
     if ((client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_len)) < 0)
     {
-      printf("[SERVER] : accept() FAILED\n");
+      fprintf(stderr,"[SERVER] : accept() FAILED\n");
       fflush(stdout);
       return 4;
     }
@@ -100,8 +100,8 @@ int main(void)
 }
 
 //==================================================FUNCTION==========================================================|
-// Name:					socketThread 																																													|
-// Params:				void*	clientSocket	The socket for the thread to connect to.																					|
+// Name:				socketThread 																																												  |
+// Params:			void*	clientSocket	The socket for the thread to connect to.																				  |
 // Returns:			NONE 																																																	|
 // Outputs:			NONE																																																	|
 // Description:	This function represents a thread to handle the connection between the server and one of the clients.	|
@@ -124,21 +124,21 @@ void *socketThread(void *clientSocket)
   while (strcmp(buffer, ">>bye<<") != 0)
   {
     //===MESSAGE FORMAT===//
-    strcpy(message, IP);
-    strcat(message, " ");
-    strcat(message, buffer);
-    strcat(message, " ");
+    char userID[6], msg[41];
+    sscanf(buffer, "[%5[^]]]%*[^>]>> %40[^\n]", userID, msg);
 
+    // Format message: "IP [user] << msg time"
     time_t t = time(NULL);
-    struct tm *time_info;
-    time_info = localtime(&t);
+    struct tm *time_info = localtime(&t);
     char timeChar[10];
     strftime(timeChar, sizeof(timeChar), "%H:%M:%S", time_info);
 
-    strcat(message, timeChar);
-    write(clSocket, message, strlen(message));
-
+    snprintf(message, sizeof(message), "%-15s [%5s] << %-40s (%s)", IP, userID, msg, timeChar);
     writeToClients(clSocket, message);
+
+    // Echo to sender with ">>"
+    snprintf(message, sizeof(message), "%-15s [%5s] >> %-40s (%s)", IP, userID, msg, timeChar);
+    write(clSocket, message, strlen(message));
 
     memset(buffer, 0, BUFSIZ);
     numBytesRead = read(clSocket, buffer, BUFSIZ);
@@ -151,8 +151,8 @@ void *socketThread(void *clientSocket)
 }
 
 //==================================================FUNCTION==============================|
-// Name:					initializeArray 																													|
-// Params:				NONE																																			|
+// Name:				initializeArray 																													|
+// Params:			NONE																																			|
 // Returns:			NONE 																																			|
 // Outputs:			NONE																																			|
 // Description:	This function initializes the userList array to remove any garbage data.	|
@@ -167,8 +167,8 @@ void initializeArray(void)
 }
 
 //==================================================FUNCTION================================|
-// Name:					updateArray 																																|
-// Params:				int	client_socket	the socket of the client that needs updating.							|
+// Name:				updateArray 																																|
+// Params:			int	client_socket	the socket of the client that needs updating.							|
 // Returns:			NONE 																																				|
 // Outputs:			NONE																																				|
 // Description:	This function updates the userList array, adding socket and IP information.	|
@@ -188,8 +188,8 @@ void updateArray(int client_socket)
 }
 
 //==================================================FUNCTION========================|
-// Name:					writeToClients 																											|
-// Params:				int*	clSocket	The socket of the client that sent the message.			|
+// Name:				writeToClients 																											|
+// Params:			int*	clSocket	The socket of the client that sent the message.			|
 //							char	message		The message to be sent to clients.									|
 // Returns:			NONE 																																|
 // Outputs:			NONE																																|

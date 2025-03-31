@@ -7,7 +7,9 @@
 
 #include "../inc/chat-client.h"
 
+
 char buffer[BUFSIZ];
+static int line_count = 0;
 
 int main(int argc, char *argv[])
 {
@@ -24,7 +26,7 @@ int main(int argc, char *argv[])
    */
   if (argc != 3)
   {
-    printf("USAGE : %s -user<userID> -server<serverName>\n", argv[0]);
+    fprintf(stderr,"USAGE : %s -user<userID> -server<serverName>\n", argv[0]);
     return 1;
   }
 
@@ -42,7 +44,7 @@ int main(int argc, char *argv[])
 
   if (strlen(userID) == 0 || strlen(serverName) == 0)
   {
-    printf("ERROR: The -user and -server must be provided.\n");
+    fprintf(stderr,"ERROR: The -user and -server must be provided.\n");
     return 1;
   }
   // strcpy(clientName, "Test");
@@ -51,7 +53,7 @@ int main(int argc, char *argv[])
 
   if (strlen(userID) > 5)
   {
-    printf("ERROR: The userID must be a maximum of 5 characters.\n");
+    fprintf(stderr,"ERROR: The userID must be a maximum of 5 characters.\n");
     return 1;
   }
 
@@ -60,7 +62,7 @@ int main(int argc, char *argv[])
    */
   if ((host = gethostbyname(serverName)) == NULL)
   {
-    printf("[CLIENT] : Host Info Search - FAILED\n");
+    fprintf(stderr,"[CLIENT] : Host Info Search - FAILED\n");
     return 2;
   }
 
@@ -77,22 +79,22 @@ int main(int argc, char *argv[])
   /*
    * get a socket for communications
    */
-  printf("[CLIENT] : Getting STREAM Socket to talk to SERVER\n");
+  fprintf(stderr,"[CLIENT] : Getting STREAM Socket to talk to SERVER\n");
   fflush(stdout);
   if ((my_server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
   {
-    printf("[CLIENT] : Getting Client Socket - FAILED\n");
+    fprintf(stderr,"[CLIENT] : Getting Client Socket - FAILED\n");
     return 3;
   }
 
   /*
    * attempt a connection to server
    */
-  printf("[CLIENT] : Connecting to SERVER\n");
+  fprintf(stderr,"[CLIENT] : Connecting to SERVER\n");
   fflush(stdout);
   if (connect(my_server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
   {
-    printf("[CLIENT] : Connect to Server - FAILED\n");
+    fprintf(stderr,"[CLIENT] : Connect to Server - FAILED\n");
     close(my_server_socket);
     return 4;
   }
@@ -101,7 +103,7 @@ int main(int argc, char *argv[])
   int chat_startx, chat_starty, chat_width, chat_height;
   int msg_startx, msg_starty, msg_width, msg_height, i;
   int shouldBlank;
-  char buf[BUFSIZ];
+  char input_buf[MAX_INPUT + 1];
 
   initscr(); /* Start curses mode            */
   cbreak();
@@ -116,7 +118,7 @@ int main(int argc, char *argv[])
   chat_startx = 1;
   chat_starty = LINES - chat_height;
 
-  msg_height = LINES - chat_height - 1;
+  msg_height = MAX_LINES + 2;
   msg_width = COLS;
   msg_startx = 0;
   msg_starty = 0;
@@ -136,7 +138,7 @@ int main(int argc, char *argv[])
   while (done)
   {
     /* clear out the contents of buffer (if any) */
-    memset(buffer, 0, BUFSIZ);
+    memset(input_buf, 0, sizeof(input_buf));
 
     /*
      * now that we have a connection, get a commandline from
@@ -144,26 +146,35 @@ int main(int argc, char *argv[])
      */
     // printf ("Enter a command [date | who | df | <enter your own command> | >>bye<<] >>> ");
     fflush(stdout);
-    input_win(chat_win, buffer); // TODO: Limit input to 80 characters
+    input_win(chat_win, input_buf); // TODO: Limit input to 80 characters
     // If needed - Split message
     // Format message according to requirements
-    strcpy(message, "[");
-    strcat(message, clientName);
-    strcat(message, "] >> ");
-    strcat(message, buffer);
-
-    /* check if the user wants to quit */
-    if (strcmp(buffer, ">>bye<<") == 0)
+    if (strcmp(input_buf, ">>bye<<") == 0)
     {
-      // send the command to the SERVER
+      strcpy(message, "[");
+      strcat(message, clientName);
+      strcat(message, "] >> ");
+      strcat(message, input_buf);
       write(my_server_socket, message, strlen(message));
       done = 0;
     }
     else
-    {
-      write(my_server_socket, message, strlen(message));
-      // len = read (my_server_socket, buffer, sizeof (buffer));
-      // display_win(msg_win, buffer, 10, shouldBlank);
+    {   
+    // Parcel message into 40-char chunks
+    int len = strlen(input_buf);
+    for (int i = 0; i < len; i += MAX_MSG)
+      {
+        char chunk[MAX_MSG + 1];
+        int chunk_len = (len - i > MAX_MSG) ? MAX_MSG : (len - i);
+        strncpy(chunk, input_buf + i, chunk_len);
+        chunk[chunk_len] = '\0';
+
+        strcpy(message, "[");
+        strcat(message, clientName);
+        strcat(message, "] >> ");
+        strcat(message, chunk);
+        write(my_server_socket, message, strlen(message));
+      }
     }
   }
 
@@ -183,7 +194,13 @@ int main(int argc, char *argv[])
 
   return 0;
 }
-
+//==================================================FUNCTION==========================================================|
+// Name:				init_color_pair 																																										  |
+// Params:			NONE                                                        																				  |
+// Returns:			NONE 																																																	|
+// Outputs:			NONE																																																	|
+// Description:	This function will initialize the color of the client.                                              	|
+//====================================================================================================================|
 void init_color_pair()
 {
   if (start_color() == ERR)
@@ -202,6 +219,17 @@ void init_color_pair()
   init_pair(1, COLOR_RED, COLOR_BLACK);
   init_pair(2, COLOR_GREEN, COLOR_BLACK);
 }
+//==================================================FUNCTION==========================================================|
+// Name:        create_newwin                                                                                         |
+// Params:      int     height       The height of the new window.                                                    |
+//              int     width        The width of the new window.                                                     |
+//              int     starty       The starting y-coordinate of the window.                                         |
+//              int     startx       The starting x-coordinate of the window.                                         |
+//              int     color_pair   The color pair to be used for the window.                                        |
+// Returns:     WINDOW*              Pointer to the newly created window.                                             |
+// Outputs:     NONE                                                                                           	      |
+// Description: This function creates a new ncurses window with a border and background color.                        |
+//====================================================================================================================|
 WINDOW *create_newwin(int height, int width, int starty, int startx, int color_pair)
 {
   WINDOW *local_win;
@@ -214,6 +242,14 @@ WINDOW *create_newwin(int height, int width, int starty, int startx, int color_p
   return local_win;
 }
 
+//==================================================FUNCTION==========================================================|
+// Name:        input_win                                                                                             |
+// Params:      WINDOW*  win         The ncurses window where input is received.                                      |
+//              char*    word        The buffer to store user input.                                                  |
+// Returns:     NONE                                                                                                  |
+// Outputs:     The user input is displayed in the specified ncurses window.                                          |
+// Description: This function takes input from the user character by character and displays it in the window.         |
+//====================================================================================================================|
 /* This function is for taking input chars from the user */
 void input_win(WINDOW *win, char *word)
 {
@@ -252,11 +288,30 @@ void input_win(WINDOW *win, char *word)
     }
   }
 } /* input_win */
-
+//==================================================FUNCTION==========================================================|
+// Name:        display_win                                                                                           |
+// Params:      WINDOW*  win          The ncurses window where the message is displayed.                              |
+//              char*    word         The message to be displayed.                                                    |
+//              int      whichRow     The row in the window where the message should appear.                          |
+//              int      shouldBlank  Whether to clear the window before displaying (1 = clear, 0 = append).          |
+// Returns:     NONE                                                                                                  |
+// Outputs:     The provided message is displayed in the specified window.                                            |
+// Description: This function displays a message in a specified row of the ncurses window.                            |
+//====================================================================================================================|
 void display_win(WINDOW *win, char *word, int whichRow, int shouldBlank)
 {
   if (shouldBlank == 1)
     blankWin(win);               /* make it a clean window */
+  if (line_count >= MAX_LINES)
+  {
+    wscrl(win, 1); // Scroll up one line
+    wmove(win, MAX_LINES, 1);
+  }
+  else
+  {
+    wmove(win, line_count + 1, 1);
+    line_count++;
+  }
   wmove(win, (whichRow + 1), 1); /* position cusor at approp row */
   wprintw(win, word);
   wrefresh(win);

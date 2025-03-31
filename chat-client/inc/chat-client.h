@@ -15,6 +15,8 @@
 #include <pthread.h>
 
 #define PORT 5000
+#define MAX_INPUT 80
+#define MAX_MSG 40
 #define MAX_LINES 10
 
 WINDOW *create_newwin(int, int, int, int, int);
