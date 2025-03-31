@@ -16,13 +16,14 @@
 
 #define PORT 5000
 
-typedef struct{
-	int 	*socket;
-	char	ip[16];
-}userInfo;
+typedef struct {
+    int     socket;
+    char    ip[16];
+} userInfo;
 
 void *socketThread(void *);
 void initializeArray(void);
 void initializeServerAddress(struct sockaddr_in server_addr);
 void updateArray(int client_socket);
-void writeToClients(int* clSocket, char message[]);
+void writeToClients(int clSocket, char message[]);
+int parcelMessage(char* original, char* parceled[], int maxParcels);

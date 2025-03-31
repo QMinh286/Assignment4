@@ -13,10 +13,9 @@
 #include <fcntl.h>
 #include <ncurses.h>
 #include <pthread.h>
+#include <time.h>
 
 #define PORT 5000
-#define MAX_INPUT 80
-#define MAX_MSG 40
 #define MAX_LINES 10
 
 WINDOW *create_newwin(int, int, int, int, int);
@@ -28,3 +27,5 @@ void destroy_win(WINDOW *win);
 void blankWin(WINDOW *win);
 void init_color_pair();
 void *receive_messages(void *arg);
+void add_to_history(char *message);
+extern WINDOW *msg_win;

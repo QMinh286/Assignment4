@@ -31,7 +31,6 @@ int main (void)
 
     if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
     {
-        printf("[SERVER] : socket() FAILED\n");
         return 1;
     }
   	
@@ -42,77 +41,51 @@ int main (void)
 
     int opt = 1;
     if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-        printf("[SERVER] : setsockopt() FAILED\n");
         close(server_socket);
         return 1;
     }
 
     if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) 
     {
-        printf("[SERVER] : bind() FAILED\n");
         close(server_socket);
         return 2;
     }
 
     if (listen(server_socket, 5) < 0) 
     {
-        printf("[SERVER] : listen() - FAILED.\n");
         close(server_socket);
         return 3;
     }
   
-    printf("[SERVER] : Server started on port %d. Waiting for connections...\n", PORT);
-    
     //===MAIN LOOP===//
     while (numClients < 10) 
     {
-        fflush(stdout);	
-    
         client_len = sizeof(client_addr);
         if ((client_socket = accept(server_socket,(struct sockaddr *)&client_addr, &client_len)) < 0) 
         {
-            printf("[SERVER] : accept() FAILED\n");
-            fflush(stdout);	
             return 4;
         }
 
-        // Get client IP address
         if (inet_ntop(AF_INET, &client_addr.sin_addr, IP, INET_ADDRSTRLEN) == NULL) {
-            perror("inet_ntop");
             exit(EXIT_FAILURE);
         }
 
-        // Add client to userList
         pthread_mutex_lock(&userList_mutex);
         updateArray(client_socket);
         pthread_mutex_unlock(&userList_mutex);
-        
-        printf("[SERVER] : New client connected from %s. Total clients: %d\n", IP, numClients);
-        fflush(stdout);	
 
-        // Create thread to handle this client
         if (pthread_create(&(tid[(numClients-1)]), NULL, socketThread, (void *)&client_socket))
         {
-            printf("[SERVER] : pthread_create() FAILED\n");
-            fflush(stdout);	
             return 5;
         }
 
-        // Detach thread so resources are freed on thread exit
         pthread_detach(tid[(numClients-1)]);
-
-        fflush(stdout);	
     }
     
     //===CHAT FULL===//
-    printf("\n[SERVER] CHAT FULL: Waiting for client to leave. \n");
     for(i=0; i<10; i++)
     {
-        int joinStatus = pthread_join(tid[i], (void *)(&whichClient));
-        if(joinStatus == 0)
-        {
-            printf("\n[SERVER] CHAT SPOT OPENED (joinStatus=%d)\n", joinStatus);
-        }
+        pthread_join(tid[i], (void *)(&whichClient));
     }
     
     //===CLEANUP===//
@@ -132,14 +105,13 @@ int main (void)
 //==================================================================================|
 int parcelMessage(char* original, char* parceled[], int maxParcels) {
     int msgLen = strlen(original);
-    int numParcels = (msgLen + 39) / 40; // Calculate number of parcels needed
+    int numParcels = (msgLen + 39) / 40; 
     int i, j, k = 0;
-    
-    // Limit number of parcels if needed
+
     if (numParcels > maxParcels) numParcels = maxParcels;
     
     for (i = 0; i < numParcels; i++) {
-        parceled[i] = malloc(41); // 40 chars + null terminator
+        parceled[i] = malloc(41); 
         if (parceled[i] == NULL) {
             perror("Memory allocation failed");
             for (j = 0; j < i; j++) {
@@ -252,24 +224,18 @@ void *socketThread(void *clientSocket)
                 free(parcels[i]);
             }
         }
-        
-        // Read next message
+     
         memset(buffer, 0, BUFSIZ);
         numBytesRead = read(clSocket, buffer, BUFSIZ);
         
-        // Check for disconnection
         if (numBytesRead <= 0) {
             break;
         }
     }
     
     //===SHUTDOWN===//
-    printf("[SERVER] : Client %s disconnected.\n", userID);
-    
-    // Clean up client resources
     pthread_mutex_lock(&userList_mutex);
-    
-    // Remove client from userList
+
     for (int i = 0; i < 10; i++) {
         if (userList[i].socket == clSocket) {
             userList[i].socket = -1;
@@ -281,13 +247,7 @@ void *socketThread(void *clientSocket)
     
     pthread_mutex_unlock(&userList_mutex);
     
-    // Close socket
     close(clSocket);
-
-    // Check if all clients are gone
-    if (numClients == 0) {
-        printf("[SERVER] : All clients disconnected. Server will shut down.\n");
-    }
 
     pthread_exit((void *)iAmClient);
 }
@@ -336,20 +296,14 @@ void updateArray(int client_socket){
 void writeToClients(int clSocket, char message[]){
     pthread_mutex_lock(&userList_mutex);
     
-    printf("[SERVER] Broadcasting: %s\n", message);
-    
     for (int i = 0; i < 10; i++){
         if(userList[i].socket != -1 && userList[i].socket != clSocket){
             int result = write(userList[i].socket, message, strlen(message));
             if (result < 0) {
-                // Handle failed write - likely client disconnected
-                printf("[SERVER] : Failed to write to client socket %d\n", userList[i].socket);
                 close(userList[i].socket);
                 userList[i].socket = -1;
                 memset(userList[i].ip, 0, 16);
                 numClients--;
-            } else {
-                printf("[SERVER] Sent %d bytes to client %d\n", result, i);
             }
         }
     }
