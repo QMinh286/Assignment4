@@ -1,109 +1,110 @@
 /*
-*	FILE:					tcpip-server.c
-*	ASSIGNMENT:		The "Can We Talk?" System
-*	PROGRAMMERS:	Jose Morales Gutierrez, Oliver Gingerich, Quang Minh Vu
-*	DESCRIPTION:	This file holds the functions required for the chat server to function.
-*/
+ *	FILE:					tcpip-server.c
+ *	ASSIGNMENT:		The "Can We Talk?" System
+ *	PROGRAMMERS:	Jose Morales Gutierrez, Oliver Gingerich, Quang Minh Vu
+ *	DESCRIPTION:	This file holds the functions required for the chat server to function.
+ */
 
 #include "../inc/chat-server.h"
 
 //===GLOBALS===//
-static int	numClients = 0;
-userInfo		userList[10];
-struct 			sockaddr_in addr;
-socklen_t 	addr_len;
-char 				IP[INET_ADDRSTRLEN];
+static int numClients = 0;
+userInfo userList[10];
+struct sockaddr_in addr;
+socklen_t addr_len;
+char IP[INET_ADDRSTRLEN];
 
-int main (void)
+int main(void)
 {
-	//===VARIABLES===//
-  int       server_socket, client_socket;
-  int       client_len;
-  struct 		sockaddr_in client_addr, server_addr;
-  int       len, i;
-  pthread_t	tid[10];
-  int       whichClient;
-  char		  message[79];
+  //===VARIABLES===//
+  int server_socket, client_socket;
+  int client_len;
+  struct sockaddr_in client_addr, server_addr;
+  int len, i;
+  pthread_t tid[10];
+  int whichClient;
+  char message[79];
 
-	initializeArray();
+  initializeArray();
 
-  if ((server_socket = socket (AF_INET, SOCK_STREAM, 0)) < 0) 
+  if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
   {
-    printf ("[SERVER] : socket() FAILED\n");
+    printf("[SERVER] : socket() FAILED\n");
     return 1;
   }
-  	
-  //===INITIALIZING MEMORY===//
-  memset (&server_addr, 0, sizeof (server_addr));
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_addr.s_addr = htonl (INADDR_ANY);
-  server_addr.sin_port = htons (PORT);
 
-  if (bind (server_socket, (struct sockaddr *)&server_addr, sizeof (server_addr)) < 0) 
+  //===INITIALIZING MEMORY===//
+  memset(&server_addr, 0, sizeof(server_addr));
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  server_addr.sin_port = htons(PORT);
+
+  if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
   {
-    printf ("[SERVER] : bind() FAILED\n");
-    close (server_socket);
+    printf("[SERVER] : bind() FAILED\n");
+    close(server_socket);
     return 2;
   }
-    
-  if (listen (server_socket, 5) < 0) 
+
+  if (listen(server_socket, 5) < 0)
   {
-    printf ("[SERVER] : listen() - FAILED.\n");
-    close (server_socket);
+    printf("[SERVER] : listen() - FAILED.\n");
+    close(server_socket);
     return 3;
   }
-  
-//===MAIN LOOP===//
-  while (numClients < 10) 
+
+  //===MAIN LOOP===//
+  while (numClients < 10)
   {
-		fflush(stdout);	
-	
-		client_len = sizeof (client_addr);
-		if ((client_socket = accept (server_socket,(struct sockaddr *)&client_addr, &client_len)) < 0) 
-		{
-     	printf ("[SERVER] : accept() FAILED\n");
-      fflush(stdout);	
+    fflush(stdout);
+
+    client_len = sizeof(client_addr);
+    if ((client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_len)) < 0)
+    {
+      printf("[SERVER] : accept() FAILED\n");
+      fflush(stdout);
       return 4;
-		}
+    }
 
-		if (inet_ntop(AF_INET, &client_addr, IP, INET_ADDRSTRLEN) == NULL) {
-			perror("inet_ntop");
+    if (inet_ntop(AF_INET, &client_addr, IP, INET_ADDRSTRLEN) == NULL)
+    {
+      perror("inet_ntop");
       exit(EXIT_FAILURE);
-   	}
+    }
 
-		updateArray(client_socket);
-		fflush(stdout);	
+    updateArray(client_socket);
+    fflush(stdout);
 
-		if (pthread_create(&(tid[(numClients-1)]), NULL, socketThread, (void *)&client_socket))
-		{
-	  	printf ("[SERVER] : pthread_create() FAILED\n");
-      fflush(stdout);	
-	  	return 5;
-		}
+    if (pthread_create(&(tid[(numClients - 1)]), NULL, socketThread, (void *)&client_socket))
+    {
+      printf("[SERVER] : pthread_create() FAILED\n");
+      fflush(stdout);
+      return 5;
+    }
 
-		fflush(stdout);	
+    fflush(stdout);
   }
-	//===CHAT FULL===//
+  //===CHAT FULL===//
   printf("\n[SERVER] CHAT FULL: Waiting for client to leave. \n");
-  for(i=0; i<10; i++)
+  for (i = 0; i < 10; i++)
   {
-  	int joinStatus = pthread_join(tid[i], (void *)(&whichClient));
-		if(joinStatus == 0)
-		{
-	  	printf("\n[SERVER] CHAT SPOT OPENED (joinStatus=%d)\n", whichClient, joinStatus);
-		}
+    int joinStatus = pthread_join(tid[i], (void *)(&whichClient));
+    if (joinStatus == 0)
+    {
+      printf("\n[SERVER] CHAT SPOT OPENED (joinStatus=%d)\n", whichClient, joinStatus);
+    }
   }
-	//===CLEANUP===//
-  close (server_socket);
+  //===CLEANUP===//
+  close(server_socket);
   return 0;
 }
 
 //==================================================FUNCTION==========================================================|
-//Name:					socketThread 																																													|
-//Params:				void*	clientSocket	The socket for the thread to connect to.																					|
-//Returns:			NONE 																																																	|
-//Outputs:			NONE																																																	|
-//Description:	This function represents a thread to handle the connection between the server and one of the clients.	| 
+// Name:					socketThread 																																													|
+// Params:				void*	clientSocket	The socket for the thread to connect to.																					|
+// Returns:			NONE 																																																	|
+// Outputs:			NONE																																																	|
+// Description:	This function represents a thread to handle the connection between the server and one of the clients.	|
 //====================================================================================================================|
 void *socketThread(void *clientSocket)
 {
@@ -112,15 +113,15 @@ void *socketThread(void *clientSocket)
   char message[79];
   int sizeOfRead;
   int numBytesRead;
-  int clSocket = *((int*)clientSocket);
-    
-  memset(buffer,0,BUFSIZ);
+  int clSocket = *((int *)clientSocket);
 
-  int iAmClient = numClients;	 
+  memset(buffer, 0, BUFSIZ);
 
-  numBytesRead = read (clSocket, buffer, BUFSIZ);
+  int iAmClient = numClients;
 
-  while(strcmp(buffer,">>bye<<") != 0)
+  numBytesRead = read(clSocket, buffer, BUFSIZ);
+
+  while (strcmp(buffer, ">>bye<<") != 0)
   {
     //===MESSAGE FORMAT===//
     strcpy(message, IP);
@@ -129,73 +130,79 @@ void *socketThread(void *clientSocket)
     strcat(message, " ");
 
     time_t t = time(NULL);
-    struct tm * time_info;
-    time_info = localtime(&t);  	
-  	char timeChar[10];
-  	strftime(timeChar, sizeof(timeChar), "%H:%M:%S", time_info);
+    struct tm *time_info;
+    time_info = localtime(&t);
+    char timeChar[10];
+    strftime(timeChar, sizeof(timeChar), "%H:%M:%S", time_info);
 
-  	strcat(message, timeChar);
-    write (clSocket, message, strlen(message)); 
+    strcat(message, timeChar);
+    write(clSocket, message, strlen(message));
 
-		writeToClients(clSocket, message);
-		
-    memset(buffer,0,BUFSIZ);
-    numBytesRead = read (clSocket, buffer, BUFSIZ);
+    writeToClients(clSocket, message);
+
+    memset(buffer, 0, BUFSIZ);
+    numBytesRead = read(clSocket, buffer, BUFSIZ);
   }
-	//===SHUTDOWN===//
+  //===SHUTDOWN===//
   close(clSocket);
   numClients--;
 
   pthread_exit((void *)iAmClient);
 }
 
-
 //==================================================FUNCTION==============================|
-//Name:					initializeArray 																													|
-//Params:				NONE																																			|
-//Returns:			NONE 																																			|
-//Outputs:			NONE																																			|
-//Description:	This function initializes the userList array to remove any garbage data.	| 
+// Name:					initializeArray 																													|
+// Params:				NONE																																			|
+// Returns:			NONE 																																			|
+// Outputs:			NONE																																			|
+// Description:	This function initializes the userList array to remove any garbage data.	|
 //========================================================================================|
-void initializeArray(void){
-	
-	for(int i = 0; i < 10; i++){
-		userList[i].socket = -1;
-		}
-} 
+void initializeArray(void)
+{
 
+  for (int i = 0; i < 10; i++)
+  {
+    userList[i].socket = -1;
+  }
+}
 
 //==================================================FUNCTION================================|
-//Name:					updateArray 																																|
-//Params:				int	client_socket	the socket of the client that needs updating.							|
-//Returns:			NONE 																																				|
-//Outputs:			NONE																																				|
-//Description:	This function updates the userList array, adding socket and IP information.	| 
+// Name:					updateArray 																																|
+// Params:				int	client_socket	the socket of the client that needs updating.							|
+// Returns:			NONE 																																				|
+// Outputs:			NONE																																				|
+// Description:	This function updates the userList array, adding socket and IP information.	|
 //==========================================================================================|
-void updateArray(int client_socket){
+void updateArray(int client_socket)
+{
 
-	for(int i = 0; i < 10; i++){
-		if (userList[i].socket == -1){
-			userList[i].socket = client_socket;
-			numClients++;
-			break;
-		}
-	}
+  for (int i = 0; i < 10; i++)
+  {
+    if (userList[i].socket == -1)
+    {
+      userList[i].socket = client_socket;
+      numClients++;
+      break;
+    }
+  }
 }
 
 //==================================================FUNCTION========================|
-//Name:					writeToClients 																											|
-//Params:				int*	clSocket	The socket of the client that sent the message.			|
+// Name:					writeToClients 																											|
+// Params:				int*	clSocket	The socket of the client that sent the message.			|
 //							char	message		The message to be sent to clients.									|
-//Returns:			NONE 																																|
-//Outputs:			NONE																																|
-//Description:	This function distributes a recieved message to all active clients.	| 
+// Returns:			NONE 																																|
+// Outputs:			NONE																																|
+// Description:	This function distributes a recieved message to all active clients.	|
 //==================================================================================|
-void writeToClients(int* clSocket, char message[]){
+void writeToClients(int *clSocket, char message[])
+{
 
-		for (int i = 0; i < 10; i++){
-			if(userList[i].socket != -1 && userList[i].socket != clSocket){
-				write(userList[i].socket, message, strlen(message));
-			}
-		}
-} 
+  for (int i = 0; i < 10; i++)
+  {
+    if (userList[i].socket != -1 && userList[i].socket != clSocket)
+    {
+      write(userList[i].socket, message, strlen(message));
+    }
+  }
+}

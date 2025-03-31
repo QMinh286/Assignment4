@@ -13,7 +13,7 @@
 # =======================================================
 #                     Dependencies
 # =======================================================                     
-./obj/tcpipClient.o : ./src/tcpip-client.c
+./obj/tcpipClient.o : ./src/tcpip-client.c ./inc/chat-client.h
 	cc -c ./src/tcpip-client.c -o ./obj/tcpipClient.o
 
 #
